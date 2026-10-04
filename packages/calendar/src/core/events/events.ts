@@ -99,7 +99,12 @@ const parseSourceEventType = (
   value: string | null,
   availability: string | null,
 ): SourceEventType => {
-  if (value === "focusTime" || value === "outOfOffice" || value === "workingLocation") {
+  if (
+    value === "focusTime"
+    || value === "outOfOffice"
+    || value === "tentative"
+    || value === "workingLocation"
+  ) {
     return value;
   }
 
@@ -114,13 +119,35 @@ const parseSourceEventType = (
   return "default";
 };
 
+// Tentative is stored as a busy event with its own source type, so it is matched before availability.
+const resolveExcludableAvailability = (
+  sourceEventType: SourceEventType,
+  availability: string | null,
+): EventAvailability | "tentative" => {
+  if (sourceEventType === "tentative") {
+    return "tentative";
+  }
+  return parseAvailability(availability) ?? "busy";
+};
+
+const titleContainsKeyword = (title: string | null, keywords: string[]): boolean => {
+  if (!title) {
+    return false;
+  }
+  const normalizedTitle = title.toLowerCase();
+  return keywords.some((keyword) => normalizedTitle.includes(keyword.toLowerCase()));
+};
+
 const shouldExcludeSyncEvent = (event: {
   excludeAllDayEvents: boolean;
+  excludeAvailabilities: string[];
   excludeFocusTime: boolean;
   excludeOutOfOffice: boolean;
+  excludeTitleKeywords: string[];
   availability: string | null;
   isAllDay: boolean | null;
   sourceEventType: string | null;
+  title: string | null;
 }): boolean => {
   const sourceEventType = parseSourceEventType(event.sourceEventType, event.availability);
 
@@ -134,6 +161,16 @@ const shouldExcludeSyncEvent = (event: {
     return true;
   }
   if (event.excludeOutOfOffice && sourceEventType === "outOfOffice") {
+    return true;
+  }
+  if (
+    event.excludeAvailabilities.includes(
+      resolveExcludableAvailability(sourceEventType, event.availability),
+    )
+  ) {
+    return true;
+  }
+  if (titleContainsKeyword(event.title, event.excludeTitleKeywords)) {
     return true;
   }
 
@@ -185,11 +222,13 @@ const getEventsForCalendarsWithDiagnostics = async (
       calendarUrl: calendarsTable.url,
       customEventName: calendarsTable.customEventName,
       excludeAllDayEvents: calendarsTable.excludeAllDayEvents,
+      excludeAvailabilities: calendarsTable.excludeAvailabilities,
       excludeEventDescription: calendarsTable.excludeEventDescription,
       excludeEventLocation: calendarsTable.excludeEventLocation,
       excludeEventName: calendarsTable.excludeEventName,
       excludeFocusTime: calendarsTable.excludeFocusTime,
       excludeOutOfOffice: calendarsTable.excludeOutOfOffice,
+      excludeTitleKeywords: calendarsTable.excludeTitleKeywords,
       markEventsAsPrivate: calendarsTable.markEventsAsPrivate,
       availability: eventStatesTable.availability,
       description: eventStatesTable.description,

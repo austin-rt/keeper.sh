@@ -42,6 +42,39 @@ const syncRangeSchema = type.enumerated(
 );
 type SyncRange = typeof syncRangeSchema.infer;
 
+/* Statuses a source can exclude from syncing. Working-location events are
+ * never synced and out-of-office is covered by excludeOutOfOffice, so neither
+ * is listed. A status with `providers` is only reported by those providers.
+ * The focus-time and out-of-office toggles belong on this list too. They keep
+ * their own provider gate in the calendar route so existing settings did not
+ * have to be rewritten. */
+const EXCLUDABLE_AVAILABILITY_DEFINITIONS = [
+  { label: "Busy", value: "busy" },
+  { label: "Free", value: "free" },
+  { label: "Tentative", providers: ["outlook", "ics"], value: "tentative" },
+] as const;
+
+const excludableAvailabilitySchema = type.enumerated(
+  ...EXCLUDABLE_AVAILABILITY_DEFINITIONS.map(({ value }) => value),
+);
+type ExcludableAvailability = typeof excludableAvailabilitySchema.infer;
+type ExcludableAvailabilityDefinition = (typeof EXCLUDABLE_AVAILABILITY_DEFINITIONS)[number];
+
+const getExcludableAvailabilities = (
+  provider: string,
+): readonly ExcludableAvailabilityDefinition[] =>
+  EXCLUDABLE_AVAILABILITY_DEFINITIONS.filter(
+    (definition) =>
+      !("providers" in definition) || definition.providers.some((id) => id === provider),
+  );
+
+const MAX_EXCLUDE_TITLE_KEYWORDS = 50;
+const MAX_EXCLUDE_TITLE_KEYWORD_LENGTH = 100;
+
+const excludeTitleKeywordsSchema = type(`0 < string <= ${MAX_EXCLUDE_TITLE_KEYWORD_LENGTH}`)
+  .array()
+  .atMostLength(MAX_EXCLUDE_TITLE_KEYWORDS);
+
 const billingPeriodSchema = type("'monthly' | 'yearly'");
 type BillingPeriod = typeof billingPeriodSchema.infer;
 
@@ -534,6 +567,11 @@ export {
   DEFAULT_FUTURE_SYNC_RANGE,
   DEFAULT_HISTORIC_SYNC_RANGE,
   SYNC_RANGE_DEFINITIONS,
+  MAX_EXCLUDE_TITLE_KEYWORDS,
+  MAX_EXCLUDE_TITLE_KEYWORD_LENGTH,
+  excludableAvailabilitySchema,
+  excludeTitleKeywordsSchema,
+  getExcludableAvailabilities,
   proxyableMethods,
   planSchema,
   syncRangeSchema,
@@ -593,6 +631,7 @@ export type {
   ProxyableMethods,
   Plan,
   SyncRange,
+  ExcludableAvailability,
   BillingPeriod,
   FeedbackRequest,
   CreateSource,

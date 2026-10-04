@@ -80,6 +80,14 @@ const getEventAvailability = (event: IcsEvent) => {
   return null;
 };
 
+const TENTATIVE_BUSY_STATUS = "TENTATIVE";
+
+// Outlook feeds carry the show-as status in X-MICROSOFT-CDO-BUSYSTATUS; TRANSP only says busy or free.
+const isTentativeEvent = (event: IcsEvent): boolean => {
+  const busyStatus: unknown = event.nonStandard?.busyStatus;
+  return typeof busyStatus === "string" && busyStatus.toUpperCase() === TENTATIVE_BUSY_STATUS;
+};
+
 const buildRecurrenceIdentity = (uid: string, recurrenceDate: Date): string =>
   `${uid}|${recurrenceDate.toISOString()}`;
 
@@ -374,6 +382,7 @@ const convertCanonicalEvent = (
     location: event.location,
     ...(recurrenceDuration && { recurrenceDuration }),
     recurrenceRule: event.recurrenceRule,
+    ...isTentativeEvent(event) && { sourceEventType: "tentative" as const },
     startTime,
     startTimeZone: getEventStartTimeZone(event),
     title: event.summary,

@@ -21,6 +21,8 @@ const SOURCE_BOOLEAN_UPDATE_FIELDS = [
 
 const PRO_GATED_SOURCE_FIELDS = [
   ...EVENT_FILTER_FIELDS,
+  "excludeAvailabilities",
+  "excludeTitleKeywords",
   "customEventName",
   "treatFullDayTimedEventsAsAllDay",
   "syncHistoricRange",
@@ -36,7 +38,7 @@ interface PatchSourceRouteContext extends SourceRouteContext {
   body: unknown;
 }
 
-type SourceUpdateValue = string | boolean | number | null;
+type SourceUpdateValue = string | string[] | boolean | number | null;
 
 interface PatchSourceDependencies {
   updateSource: (
@@ -46,6 +48,20 @@ interface PatchSourceDependencies {
   ) => Promise<Record<string, unknown> | null>;
   canUseEventFilters: (userId: string) => Promise<boolean>;
 }
+
+const normalizeTitleKeywords = (keywords: string[]): string[] => {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const keyword of keywords) {
+    const trimmed = keyword.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed && !seen.has(key)) {
+      seen.add(key);
+      normalized.push(trimmed);
+    }
+  }
+  return normalized;
+};
 
 const buildSourceUpdates = (
   body: SourcePatchBody,
@@ -63,6 +79,12 @@ const buildSourceUpdates = (
   }
   if (typeof body.syncFutureRange === "string") {
     updates.syncFutureRange = body.syncFutureRange;
+  }
+  if (body.excludeAvailabilities) {
+    updates.excludeAvailabilities = [...new Set(body.excludeAvailabilities)];
+  }
+  if (body.excludeTitleKeywords) {
+    updates.excludeTitleKeywords = normalizeTitleKeywords(body.excludeTitleKeywords);
   }
 
   for (const field of SOURCE_BOOLEAN_UPDATE_FIELDS) {
@@ -99,7 +121,7 @@ const handlePatchSourceRoute = async (
 
   const hasProGatedUpdates = PRO_GATED_SOURCE_FIELDS.some((field) => {
     const value = parsedBody[field];
-    return typeof value === "boolean" || typeof value === "string";
+    return typeof value === "boolean" || typeof value === "string" || Array.isArray(value);
   });
   if (hasProGatedUpdates) {
     const allowed = await dependencies.canUseEventFilters(context.userId);

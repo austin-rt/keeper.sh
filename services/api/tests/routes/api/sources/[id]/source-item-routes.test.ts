@@ -181,4 +181,103 @@ describe("handlePatchSourceRoute", () => {
 
     expect(response.status).toBe(200);
   });
+
+  it("returns 403 when free users set title keywords", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeTitleKeywords: ["zoom room"] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        updateSource: () => Promise.resolve(null),
+      },
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("returns 403 when free users set excluded statuses", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeAvailabilities: ["free"] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        updateSource: () => Promise.resolve(null),
+      },
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("de-duplicates excluded statuses for Pro users", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeAvailabilities: ["free", "free"] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
+      },
+    );
+
+    expect(await readJson(response)).toEqual({ excludeAvailabilities: ["free"], id: "source-1" });
+  });
+
+  it("trims, drops blank and de-duplicates title keywords ignoring case", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeTitleKeywords: ["  Zoom Room ", "zoom room", "   ", "Placeholder"] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
+      },
+    );
+
+    expect(await readJson(response)).toEqual({
+      excludeTitleKeywords: ["Zoom Room", "Placeholder"],
+      id: "source-1",
+    });
+  });
+
+  it("clears excluded statuses with an empty list", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeAvailabilities: [] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
+      },
+    );
+
+    expect(await readJson(response)).toEqual({ excludeAvailabilities: [], id: "source-1" });
+  });
+
+  it("clears title keywords with an empty list", async () => {
+    const response = await handlePatchSourceRoute(
+      {
+        body: { excludeTitleKeywords: [] },
+        params: { id: "source-1" },
+        userId: "user-1",
+      },
+      {
+        canUseEventFilters: () => Promise.resolve(true),
+        updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
+      },
+    );
+
+    expect(await readJson(response)).toEqual({ excludeTitleKeywords: [], id: "source-1" });
+  });
 });
