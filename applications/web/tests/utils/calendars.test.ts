@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_EXCLUDE_TITLE_KEYWORDS,
+  MAX_EXCLUDE_TITLE_KEYWORD_LENGTH,
+} from "@keeper.sh/data-schemas";
+import {
   formatTitleKeywords,
   parseTitleKeywords,
   toggleExcludedAvailability,
@@ -22,6 +26,15 @@ describe("parseTitleKeywords", () => {
 
   it("drops empty entries so the request stays valid", () => {
     expect(parseTitleKeywords("zoom room,, ,")).toEqual(["zoom room"]);
+  });
+
+  it("keeps the list within the limits the API accepts", () => {
+    const keywords = parseTitleKeywords(
+      [`${"a".repeat(MAX_EXCLUDE_TITLE_KEYWORD_LENGTH)}b`, ...Array.from({ length: MAX_EXCLUDE_TITLE_KEYWORDS }, (_, index) => `k${index}`)].join(","),
+    );
+
+    expect(keywords).toHaveLength(MAX_EXCLUDE_TITLE_KEYWORDS);
+    expect(keywords[0]).toBe("a".repeat(MAX_EXCLUDE_TITLE_KEYWORD_LENGTH));
   });
 });
 

@@ -138,7 +138,12 @@ function useEditableCommit(
   const commit = async () => {
     if (committingRef.current) return;
 
-    const trimmed = inputRef.current?.value.trim() ?? "";
+    if (!inputRef.current) {
+      onCancel();
+      return;
+    }
+
+    const trimmed = inputRef.current.value.trim();
     if (shouldSkipEditableCommit(trimmed, value, allowEmpty)) {
       onCancel();
       return;

@@ -137,7 +137,9 @@ const PATCH = withWideEvent(
                     ),
                   )
                   .returning();
-                if (updated?.capabilities.includes("push")) {
+                const requestsSync = updated?.capabilities.includes("push")
+                  || SYNC_REQUESTING_FIELDS.some((field) => field in updates);
+                if (updated && requestsSync) {
                   await requestUserSync(transaction, userIdToUpdate);
                 }
                 await applyFeedMembership(transaction, updated ?? null);

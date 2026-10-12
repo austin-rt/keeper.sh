@@ -56,4 +56,25 @@ describe("parseIcsEvents Outlook busy status", () => {
 
     expect(parsedEvent).not.toHaveProperty("sourceEventType");
   });
+
+  it("classifies a standard tentative status when the Outlook header is absent", () => {
+    const parsedEvent = parseEventWithLines(["STATUS:TENTATIVE"]);
+
+    expect(parsedEvent.sourceEventType).toBe("tentative");
+  });
+
+  it("lets the Outlook busy status win over a tentative event status", () => {
+    const parsedEvent = parseEventWithLines([
+      "STATUS:TENTATIVE",
+      "X-MICROSOFT-CDO-BUSYSTATUS:BUSY",
+    ]);
+
+    expect(parsedEvent).not.toHaveProperty("sourceEventType");
+  });
+
+  it("leaves confirmed events unclassified", () => {
+    const parsedEvent = parseEventWithLines(["STATUS:CONFIRMED"]);
+
+    expect(parsedEvent).not.toHaveProperty("sourceEventType");
+  });
 });

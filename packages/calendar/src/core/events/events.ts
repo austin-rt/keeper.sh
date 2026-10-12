@@ -261,6 +261,7 @@ const getEventsForCalendarsWithDiagnostics = async (
     .orderBy(asc(eventStatesTable.startTime));
 
   const syncableEvents: SyncableEvent[] = [];
+  const excludedOverrides: Pick<SyncableEvent, "calendarId" | "recurrenceId" | "sourceEventUid">[] = [];
   let excludedBySyncPolicyCount = 0;
   let missingSourceEventUidCount = 0;
   let outsideReconciliationWindowCount = 0;
@@ -272,6 +273,13 @@ const getEventsForCalendarsWithDiagnostics = async (
     }
     if (shouldExcludeSyncEvent(result)) {
       excludedBySyncPolicyCount += 1;
+      if (result.recurrenceId) {
+        excludedOverrides.push({
+          calendarId: result.calendarId,
+          recurrenceId: result.recurrenceId,
+          sourceEventUid: result.sourceEventUid,
+        });
+      }
       continue;
     }
 
@@ -338,6 +346,7 @@ const getEventsForCalendarsWithDiagnostics = async (
       overBudgetSourceEventUids.push(error.sourceEventUid);
       overBudgetSourceEventStateIds.push(error.eventStateId ?? error.eventId);
     },
+    suppressedOverrides: excludedOverrides,
   });
 
   const emptyTimeRangeCount = events.filter((event) => isEmptyTimeRange(event)).length;

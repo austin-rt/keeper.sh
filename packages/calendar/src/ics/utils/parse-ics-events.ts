@@ -80,11 +80,14 @@ const getEventAvailability = (event: IcsEvent) => {
   return null;
 };
 
-const TENTATIVE_BUSY_STATUS = "TENTATIVE";
+const TENTATIVE_STATUS = "TENTATIVE";
 
 const isTentativeEvent = (event: IcsEvent): boolean => {
   const busyStatus: unknown = event.nonStandard?.busyStatus;
-  return typeof busyStatus === "string" && busyStatus.toUpperCase() === TENTATIVE_BUSY_STATUS;
+  if (typeof busyStatus === "string") {
+    return busyStatus.toUpperCase() === TENTATIVE_STATUS;
+  }
+  return event.status === TENTATIVE_STATUS;
 };
 
 const buildRecurrenceIdentity = (uid: string, recurrenceDate: Date): string =>
