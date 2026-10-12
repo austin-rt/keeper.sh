@@ -1,5 +1,5 @@
 {
-  "id": "525f0346-7009-4fa4-ba1e-e37466fbf672",
+  "id": "4c528dca-bbb5-4ac8-b0bc-68f91e8ab295",
   "prevId": "86cf1c61-d14b-4132-a75c-2e1943c18b67",
   "version": "7",
   "dialect": "postgresql",
@@ -906,13 +906,6 @@
           "notNull": true,
           "default": false
         },
-        "excludeAvailabilities": {
-          "name": "excludeAvailabilities",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
         "excludeEventDescription": {
           "name": "excludeEventDescription",
           "type": "boolean",
@@ -941,19 +934,19 @@
           "notNull": true,
           "default": false
         },
+        "excludeFreeEvents": {
+          "name": "excludeFreeEvents",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "excludeOutOfOffice": {
           "name": "excludeOutOfOffice",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "excludeTitleKeywords": {
-          "name": "excludeTitleKeywords",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
         },
         "includeInIcalFeed": {
           "name": "includeInIcalFeed",

@@ -42,12 +42,6 @@ const syncRangeSchema = type.enumerated(
 );
 type SyncRange = typeof syncRangeSchema.infer;
 
-/* Statuses a source can exclude from syncing. Working-location events are
- * never synced and out-of-office is covered by excludeOutOfOffice, so neither
- * is listed. A status with `providers` is only reported by those providers.
- * The focus-time and out-of-office toggles belong on this list too. They keep
- * their own provider gate in the calendar route so existing settings did not
- * have to be rewritten. */
 const EXCLUDABLE_AVAILABILITY_DEFINITIONS = [
   { label: "Busy", value: "busy" },
   { label: "Free", value: "free" },

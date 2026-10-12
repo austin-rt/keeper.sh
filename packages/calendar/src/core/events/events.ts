@@ -119,7 +119,6 @@ const parseSourceEventType = (
   return "default";
 };
 
-// Tentative is stored as a busy event with its own source type, so it is matched before availability.
 const resolveExcludableAvailability = (
   sourceEventType: SourceEventType,
   availability: string | null,

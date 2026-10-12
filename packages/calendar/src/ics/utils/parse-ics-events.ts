@@ -82,7 +82,6 @@ const getEventAvailability = (event: IcsEvent) => {
 
 const TENTATIVE_BUSY_STATUS = "TENTATIVE";
 
-// Outlook feeds carry the show-as status in X-MICROSOFT-CDO-BUSYSTATUS; TRANSP only says busy or free.
 const isTentativeEvent = (event: IcsEvent): boolean => {
   const busyStatus: unknown = event.nonStandard?.busyStatus;
   return typeof busyStatus === "string" && busyStatus.toUpperCase() === TENTATIVE_BUSY_STATUS;

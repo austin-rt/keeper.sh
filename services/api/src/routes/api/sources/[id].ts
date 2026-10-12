@@ -82,6 +82,12 @@ const GET = withWideEvent(
   }),
 );
 
+const SYNC_REQUESTING_FIELDS = [
+  "markEventsAsPrivate",
+  "excludeAvailabilities",
+  "excludeTitleKeywords",
+] as const;
+
 const PATCH = withWideEvent(
   withAuth(async ({ request, params, userId }) => {
     const payload = await request.json();
@@ -155,7 +161,7 @@ const PATCH = withWideEvent(
                 ),
               )
               .returning();
-            if (updated && "markEventsAsPrivate" in updates) {
+            if (updated && SYNC_REQUESTING_FIELDS.some((field) => field in updates)) {
               await requestUserSync(transaction, userIdToUpdate);
             }
             await applyFeedMembership(transaction, updated ?? null);
