@@ -8,7 +8,7 @@ import { createOutlookSourceFetcher } from "../../../../src/providers/outlook/so
 import { createSourceIngestionPlan } from "../../../../src/core/sync/sync-range";
 
 const CALENDAR_ID = "calendar-id";
-const OUTLOOK_SYNC_TOKEN_VERSION = getOAuthSyncTokenVersion(2, new Date(), CALENDAR_ID);
+const OUTLOOK_SYNC_TOKEN_VERSION = getOAuthSyncTokenVersion(1, new Date(), CALENDAR_ID);
 const TEST_PLAN = createSourceIngestionPlan("1_week", "2_years");
 const originalFetch = globalThis.fetch;
 const fetchKeeperCategoryDelta = (): Promise<Response> => Promise.resolve(Response.json({

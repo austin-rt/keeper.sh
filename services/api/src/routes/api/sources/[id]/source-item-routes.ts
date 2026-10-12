@@ -49,6 +49,15 @@ interface PatchSourceDependencies {
   canUseEventFilters: (userId: string) => Promise<boolean>;
 }
 
+const TENTATIVE_DELTA_PROVIDERS = new Set(["outlook"]);
+
+const needsTentativeReclassification = (
+  provider: string,
+  previousExcludeAvailabilities: string[],
+): boolean =>
+  TENTATIVE_DELTA_PROVIDERS.has(provider)
+  && !previousExcludeAvailabilities.includes("tentative");
+
 const normalizeTitleKeywords = (keywords: string[]): string[] => {
   const seen = new Set<string>();
   const normalized: string[] = [];
@@ -144,4 +153,4 @@ const handlePatchSourceRoute = async (
   return Response.json(updated);
 };
 
-export { handlePatchSourceRoute };
+export { handlePatchSourceRoute, needsTentativeReclassification };

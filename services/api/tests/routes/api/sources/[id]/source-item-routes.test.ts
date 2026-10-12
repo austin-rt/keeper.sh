@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handlePatchSourceRoute } from "../../../../../src/routes/api/sources/[id]/source-item-routes";
+import { handlePatchSourceRoute, needsTentativeReclassification } from "../../../../../src/routes/api/sources/[id]/source-item-routes";
 
 const readJson = (response: Response): Promise<unknown> => response.json();
 
@@ -279,5 +279,19 @@ describe("handlePatchSourceRoute", () => {
     );
 
     expect(await readJson(response)).toEqual({ excludeTitleKeywords: [], id: "source-1" });
+  });
+});
+
+describe("needsTentativeReclassification", () => {
+  it("resets an Outlook calendar the first time tentative is excluded", () => {
+    expect(needsTentativeReclassification("outlook", ["free"])).toBe(true);
+  });
+
+  it("leaves an Outlook calendar alone when tentative was already excluded", () => {
+    expect(needsTentativeReclassification("outlook", ["tentative"])).toBe(false);
+  });
+
+  it("leaves ICS calendars alone because every fetch re-reads the whole feed", () => {
+    expect(needsTentativeReclassification("ics", [])).toBe(false);
   });
 });

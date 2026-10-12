@@ -6,7 +6,7 @@ import { getOAuthSyncTokenVersion } from "../../../core/oauth/sync-window";
 import { filterSourceEventsToSyncWindow } from "../../../core/source/sync-diagnostics";
 import { fetchCalendarEvents, parseOutlookEventsWithDiagnostics } from "./utils/fetch-events";
 
-const OUTLOOK_ADAPTER_VERSION = 2;
+const OUTLOOK_ADAPTER_VERSION = 1;
 
 interface OutlookSourceFetcherConfig {
   accessToken: string;
