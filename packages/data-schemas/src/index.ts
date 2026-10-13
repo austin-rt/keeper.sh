@@ -62,8 +62,25 @@ const getExcludableAvailabilities = (
       !("providers" in definition) || definition.providers.some((id) => id === provider),
   );
 
+const canExcludeAvailability = (provider: string, availability: string): boolean =>
+  getExcludableAvailabilities(provider).some(({ value }) => value === availability);
+
 const MAX_EXCLUDE_TITLE_KEYWORDS = 50;
 const MAX_EXCLUDE_TITLE_KEYWORD_LENGTH = 100;
+
+const normalizeTitleKeywords = (keywords: readonly string[]): string[] => {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const keyword of keywords) {
+    const trimmed = keyword.trim().slice(0, MAX_EXCLUDE_TITLE_KEYWORD_LENGTH).trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed && !seen.has(key)) {
+      seen.add(key);
+      normalized.push(trimmed);
+    }
+  }
+  return normalized.slice(0, MAX_EXCLUDE_TITLE_KEYWORDS);
+};
 
 const excludeTitleKeywordsSchema = type(`0 < string <= ${MAX_EXCLUDE_TITLE_KEYWORD_LENGTH}`)
   .array()
@@ -563,9 +580,11 @@ export {
   SYNC_RANGE_DEFINITIONS,
   MAX_EXCLUDE_TITLE_KEYWORDS,
   MAX_EXCLUDE_TITLE_KEYWORD_LENGTH,
+  canExcludeAvailability,
   excludableAvailabilitySchema,
   excludeTitleKeywordsSchema,
   getExcludableAvailabilities,
+  normalizeTitleKeywords,
   proxyableMethods,
   planSchema,
   syncRangeSchema,

@@ -20,6 +20,7 @@ const sourcePatchBodySchema = type({
   "excludeEventLocation?": "boolean",
   "excludeEventName?": "boolean",
   "excludeFocusTime?": "boolean",
+  "excludeFreeEvents?": "boolean",
   "excludeOutOfOffice?": "boolean",
   "excludeTitleKeywords?": excludeTitleKeywordsSchema,
   "includeInIcalFeed?": "boolean",

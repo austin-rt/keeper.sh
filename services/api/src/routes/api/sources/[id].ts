@@ -1,6 +1,5 @@
 import { calendarAccountsTable, calendarsTable } from "@keeper.sh/database/schema";
-import { and, arrayContains, eq, sql } from "drizzle-orm";
-import { SOURCE_INGEST_LOCK_NAMESPACE } from "@keeper.sh/calendar";
+import { and, arrayContains, eq } from "drizzle-orm";
 import { withAuth, withWideEvent } from "@/utils/middleware";
 import { ErrorResponse } from "@/utils/responses";
 import { database, premiumService } from "@/context";
@@ -16,10 +15,7 @@ import { withProviderMetadata } from "@/utils/provider-display";
 import { syncDefaultFeedMembership } from "@/utils/ical-feeds";
 import type { FeedMembershipClient } from "@/utils/ical-feeds";
 import { deleteSourceCalendar } from "@/utils/source-calendars";
-import {
-  handlePatchSourceRoute,
-  needsTentativeReclassification,
-} from "./[id]/source-item-routes";
+import { handlePatchSourceRoute } from "./[id]/source-item-routes";
 
 const GET = withWideEvent(
   withAuth(async ({ params, userId }) => {
@@ -92,34 +88,6 @@ const SYNC_REQUESTING_FIELDS = [
   "excludeTitleKeywords",
 ] as const;
 
-const resolveTentativeReclassification = async (
-  transaction: Parameters<Parameters<typeof database.transaction>[0]>[0],
-  userId: string,
-  calendarId: string,
-  updates: Record<string, unknown>,
-) => {
-  const next = updates.excludeAvailabilities;
-  if (!Array.isArray(next) || !next.includes("tentative")) {
-    return {};
-  }
-  const [current] = await transaction
-    .select({
-      excludeAvailabilities: calendarsTable.excludeAvailabilities,
-      provider: calendarAccountsTable.provider,
-    })
-    .from(calendarsTable)
-    .innerJoin(calendarAccountsTable, eq(calendarsTable.accountId, calendarAccountsTable.id))
-    .where(and(eq(calendarsTable.id, calendarId), eq(calendarsTable.userId, userId)))
-    .limit(1);
-  if (!current || !needsTentativeReclassification(current.provider, current.excludeAvailabilities)) {
-    return {};
-  }
-  await transaction.execute(
-    sql`select pg_advisory_xact_lock(${SOURCE_INGEST_LOCK_NAMESPACE}, hashtext(${calendarId}))`,
-  );
-  return { ingestSeq: sql`${calendarsTable.ingestSeq} + 1`, syncToken: null };
-};
-
 const PATCH = withWideEvent(
   withAuth(async ({ request, params, userId }) => {
     const payload = await request.json();
@@ -127,6 +95,21 @@ const PATCH = withWideEvent(
       { body: payload, params, userId },
       {
         canUseEventFilters: (candidateUserId) => premiumService.canUseEventFilters(candidateUserId),
+        getSourceExclusionState: async (userIdToRead, sourceCalendarId) => {
+          const [source] = await database
+            .select({
+              excludeAvailabilities: calendarsTable.excludeAvailabilities,
+              provider: calendarAccountsTable.provider,
+            })
+            .from(calendarsTable)
+            .innerJoin(calendarAccountsTable, eq(calendarsTable.accountId, calendarAccountsTable.id))
+            .where(and(
+              eq(calendarsTable.id, sourceCalendarId),
+              eq(calendarsTable.userId, userIdToRead),
+            ))
+            .limit(1);
+          return source ?? null;
+        },
         updateSource: async (userIdToUpdate, sourceCalendarId, updates) => {
           const applyFeedMembership = async (
             client: FeedMembershipClient,
@@ -185,15 +168,9 @@ const PATCH = withWideEvent(
           }
 
           return await database.transaction(async (transaction) => {
-            const reclassification = await resolveTentativeReclassification(
-              transaction,
-              userIdToUpdate,
-              sourceCalendarId,
-              updates,
-            );
             const [updated] = await transaction
               .update(calendarsTable)
-              .set({ ...updates, ...reclassification })
+              .set(updates)
               .where(
                 and(
                   eq(calendarsTable.id, sourceCalendarId),

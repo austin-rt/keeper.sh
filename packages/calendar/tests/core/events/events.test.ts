@@ -123,6 +123,29 @@ describe("shouldExcludeSyncEvent", () => {
     ).toBe(true);
   });
 
+  it("excludes free tentative events when only free is excluded", () => {
+    expect(
+      shouldExcludeSyncEvent(
+        createEvent({
+          availability: "free",
+          excludeAvailabilities: ["free"],
+          sourceEventType: "tentative",
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps busy tentative events when only free is excluded", () => {
+    expect(
+      shouldExcludeSyncEvent(
+        createEvent({
+          excludeAvailabilities: ["free"],
+          sourceEventType: "tentative",
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it("keeps tentative events when only busy is excluded", () => {
     expect(
       shouldExcludeSyncEvent(

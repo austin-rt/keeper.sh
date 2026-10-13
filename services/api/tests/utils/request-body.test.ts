@@ -80,6 +80,11 @@ describe("sourcePatchBodySchema", () => {
     expect(result instanceof type.errors).toBe(false);
   });
 
+  it("accepts excludeFreeEvents from clients loaded before excluded statuses", () => {
+    const result = sourcePatchBodySchema({ excludeFreeEvents: true });
+    expect(result instanceof type.errors).toBe(false);
+  });
+
   it("rejects statuses that cannot be excluded", () => {
     const result = sourcePatchBodySchema({ excludeAvailabilities: ["workingElsewhere"] });
     expect(result instanceof type.errors).toBe(true);

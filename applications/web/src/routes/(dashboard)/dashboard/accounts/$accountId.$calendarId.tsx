@@ -28,6 +28,7 @@ import { invalidateAccountsAndSources } from "@/lib/swr";
 import { formatDate } from "@/lib/time";
 import { resolveErrorMessage } from "@/utils/errors";
 import {
+  areTitleKeywordsEqual,
   canPull,
   canPush,
   formatTitleKeywords,
@@ -955,6 +956,7 @@ function ExcludeTitleKeywordsItem({ calendarId, locked }: { calendarId: string; 
       allowEmpty
       onCommit={(value) => {
         const excludeTitleKeywords = parseTitleKeywords(value);
+        if (areTitleKeywordsEqual(excludeTitleKeywords, store.get(excludeTitleKeywordsAtom))) return;
         track(ANALYTICS_EVENTS.calendar_setting_toggled, {
           field: "excludeTitleKeywords",
           enabled: excludeTitleKeywords.length > 0,

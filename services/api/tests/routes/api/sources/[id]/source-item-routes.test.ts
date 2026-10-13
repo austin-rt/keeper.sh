@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { handlePatchSourceRoute, needsTentativeReclassification } from "../../../../../src/routes/api/sources/[id]/source-item-routes";
+import { handlePatchSourceRoute } from "../../../../../src/routes/api/sources/[id]/source-item-routes";
 
 const readJson = (response: Response): Promise<unknown> => response.json();
+
+const OUTLOOK_SOURCE = { excludeAvailabilities: [], provider: "outlook" };
 
 describe("handlePatchSourceRoute", () => {
   it("returns 400 when id param is missing", async () => {
@@ -9,6 +11,7 @@ describe("handlePatchSourceRoute", () => {
       { body: {}, params: {}, userId: "user-1" },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -21,6 +24,7 @@ describe("handlePatchSourceRoute", () => {
       { body: { unknown: true }, params: { id: "source-1" }, userId: "user-1" },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -37,6 +41,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -53,6 +58,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -72,6 +78,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({
           id: "source-1",
           ...updates,
@@ -91,6 +98,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({
           id: "source-1",
           ...updates,
@@ -110,6 +118,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({
           id: "source-1",
           ...updates,
@@ -133,6 +142,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => {
           receivedUpdates = updates;
           return Promise.resolve({ id: "source-1", ...updates });
@@ -156,6 +166,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -172,6 +183,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({
           id: "source-1",
           ...updates,
@@ -191,6 +203,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -207,6 +220,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: () => Promise.resolve(null),
       },
     );
@@ -223,6 +237,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
       },
     );
@@ -239,6 +254,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
       },
     );
@@ -258,6 +274,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
       },
     );
@@ -274,6 +291,7 @@ describe("handlePatchSourceRoute", () => {
       },
       {
         canUseEventFilters: () => Promise.resolve(true),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
         updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
       },
     );
@@ -282,16 +300,68 @@ describe("handlePatchSourceRoute", () => {
   });
 });
 
-describe("needsTentativeReclassification", () => {
-  it("resets an Outlook calendar the first time tentative is excluded", () => {
-    expect(needsTentativeReclassification("outlook", ["free"])).toBe(true);
+describe("handlePatchSourceRoute excluded statuses", () => {
+  const patchWith = (
+    body: Record<string, unknown>,
+    source: { excludeAvailabilities: string[]; provider: string } | null,
+  ) => handlePatchSourceRoute(
+    { body, params: { id: "source-1" }, userId: "user-1" },
+    {
+      canUseEventFilters: () => Promise.resolve(true),
+      getSourceExclusionState: () => Promise.resolve(source),
+      updateSource: (_userId, _sourceId, updates) => Promise.resolve({ id: "source-1", ...updates }),
+    },
+  );
+
+  it("rejects a status the calendar's provider does not report", async () => {
+    const response = await patchWith(
+      { excludeAvailabilities: ["tentative"] },
+      { excludeAvailabilities: [], provider: "google" },
+    );
+
+    expect(response.status).toBe(400);
   });
 
-  it("leaves an Outlook calendar alone when tentative was already excluded", () => {
-    expect(needsTentativeReclassification("outlook", ["tentative"])).toBe(false);
+  it("returns 404 when the calendar does not exist", async () => {
+    const response = await patchWith({ excludeAvailabilities: ["free"] }, null);
+
+    expect(response.status).toBe(404);
   });
 
-  it("leaves ICS calendars alone because every fetch re-reads the whole feed", () => {
-    expect(needsTentativeReclassification("ics", [])).toBe(false);
+  it("adds free to the stored statuses for a client that still sends excludeFreeEvents", async () => {
+    const response = await patchWith(
+      { excludeFreeEvents: true },
+      { excludeAvailabilities: ["tentative"], provider: "outlook" },
+    );
+
+    expect(await readJson(response)).toEqual({
+      excludeAvailabilities: ["tentative", "free"],
+      id: "source-1",
+    });
+  });
+
+  it("removes free from the stored statuses for a client that still sends excludeFreeEvents", async () => {
+    const response = await patchWith(
+      { excludeFreeEvents: false },
+      { excludeAvailabilities: ["free", "tentative"], provider: "outlook" },
+    );
+
+    expect(await readJson(response)).toEqual({
+      excludeAvailabilities: ["tentative"],
+      id: "source-1",
+    });
+  });
+
+  it("returns 403 when free users send excludeFreeEvents", async () => {
+    const response = await handlePatchSourceRoute(
+      { body: { excludeFreeEvents: true }, params: { id: "source-1" }, userId: "user-1" },
+      {
+        canUseEventFilters: () => Promise.resolve(false),
+        getSourceExclusionState: () => Promise.resolve(OUTLOOK_SOURCE),
+        updateSource: () => Promise.resolve(null),
+      },
+    );
+
+    expect(response.status).toBe(403);
   });
 });

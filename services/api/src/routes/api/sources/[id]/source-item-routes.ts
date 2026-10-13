@@ -1,3 +1,4 @@
+import { canExcludeAvailability, normalizeTitleKeywords } from "@keeper.sh/data-schemas";
 import type { SourcePatchBody } from "@/utils/request-body";
 import { sourcePatchBodySchema } from "@/utils/request-body";
 import { idParamSchema } from "@/utils/request-query";
@@ -22,6 +23,7 @@ const SOURCE_BOOLEAN_UPDATE_FIELDS = [
 const PRO_GATED_SOURCE_FIELDS = [
   ...EVENT_FILTER_FIELDS,
   "excludeAvailabilities",
+  "excludeFreeEvents",
   "excludeTitleKeywords",
   "customEventName",
   "treatFullDayTimedEventsAsAllDay",
@@ -40,36 +42,65 @@ interface PatchSourceRouteContext extends SourceRouteContext {
 
 type SourceUpdateValue = string | string[] | boolean | number | null;
 
+interface SourceExclusionState {
+  provider: string;
+  excludeAvailabilities: string[];
+}
+
 interface PatchSourceDependencies {
   updateSource: (
     userId: string,
     sourceCalendarId: string,
     updates: Record<string, SourceUpdateValue>,
   ) => Promise<Record<string, unknown> | null>;
+  getSourceExclusionState: (
+    userId: string,
+    sourceCalendarId: string,
+  ) => Promise<SourceExclusionState | null>;
   canUseEventFilters: (userId: string) => Promise<boolean>;
 }
 
-const TENTATIVE_DELTA_PROVIDERS = new Set(["outlook"]);
+const FREE_AVAILABILITY = "free";
 
-const needsTentativeReclassification = (
-  provider: string,
-  previousExcludeAvailabilities: string[],
-): boolean =>
-  TENTATIVE_DELTA_PROVIDERS.has(provider)
-  && !previousExcludeAvailabilities.includes("tentative");
-
-const normalizeTitleKeywords = (keywords: string[]): string[] => {
-  const seen = new Set<string>();
-  const normalized: string[] = [];
-  for (const keyword of keywords) {
-    const trimmed = keyword.trim();
-    const key = trimmed.toLowerCase();
-    if (trimmed && !seen.has(key)) {
-      seen.add(key);
-      normalized.push(trimmed);
-    }
+const applyLegacyExcludeFreeEvents = (
+  excludeAvailabilities: string[],
+  excludeFreeEvents: boolean,
+): string[] => {
+  const withoutFree = excludeAvailabilities.filter((value) => value !== FREE_AVAILABILITY);
+  if (excludeFreeEvents) {
+    return [...withoutFree, FREE_AVAILABILITY];
   }
-  return normalized;
+  return withoutFree;
+};
+
+const resolveExcludeAvailabilities = async (
+  userId: string,
+  sourceCalendarId: string,
+  body: SourcePatchBody,
+  dependencies: PatchSourceDependencies,
+): Promise<string[] | Response | null> => {
+  const { excludeAvailabilities, excludeFreeEvents } = body;
+  if (!excludeAvailabilities && typeof excludeFreeEvents !== "boolean") {
+    return null;
+  }
+
+  const source = await dependencies.getSourceExclusionState(userId, sourceCalendarId);
+  if (!source) {
+    return ErrorResponse.notFound().toResponse();
+  }
+
+  const requested = excludeAvailabilities
+    ?? applyLegacyExcludeFreeEvents(source.excludeAvailabilities, excludeFreeEvents === true);
+  const unsupported = requested.filter(
+    (availability) => !canExcludeAvailability(source.provider, availability),
+  );
+  if (unsupported.length > 0) {
+    return ErrorResponse.badRequest(
+      `This calendar cannot exclude events by ${unsupported.join(", ")}.`,
+    ).toResponse();
+  }
+
+  return [...new Set(requested)];
 };
 
 const buildSourceUpdates = (
@@ -88,9 +119,6 @@ const buildSourceUpdates = (
   }
   if (typeof body.syncFutureRange === "string") {
     updates.syncFutureRange = body.syncFutureRange;
-  }
-  if (body.excludeAvailabilities) {
-    updates.excludeAvailabilities = [...new Set(body.excludeAvailabilities)];
   }
   if (body.excludeTitleKeywords) {
     updates.excludeTitleKeywords = normalizeTitleKeywords(body.excludeTitleKeywords);
@@ -141,6 +169,19 @@ const handlePatchSourceRoute = async (
 
   const updates = buildSourceUpdates(parsedBody);
 
+  const excludeAvailabilities = await resolveExcludeAvailabilities(
+    context.userId,
+    resolvedId.id,
+    parsedBody,
+    dependencies,
+  );
+  if (excludeAvailabilities instanceof Response) {
+    return excludeAvailabilities;
+  }
+  if (excludeAvailabilities) {
+    updates.excludeAvailabilities = excludeAvailabilities;
+  }
+
   if (Object.keys(updates).length === 0) {
     return ErrorResponse.badRequest("No valid fields to update").toResponse();
   }
@@ -153,4 +194,4 @@ const handlePatchSourceRoute = async (
   return Response.json(updated);
 };
 
-export { handlePatchSourceRoute, needsTentativeReclassification };
+export { handlePatchSourceRoute };

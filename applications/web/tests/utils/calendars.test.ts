@@ -4,6 +4,7 @@ import {
   MAX_EXCLUDE_TITLE_KEYWORD_LENGTH,
 } from "@keeper.sh/data-schemas";
 import {
+  areTitleKeywordsEqual,
   formatTitleKeywords,
   parseTitleKeywords,
   toggleExcludedAvailability,
@@ -35,6 +36,20 @@ describe("parseTitleKeywords", () => {
 
     expect(keywords).toHaveLength(MAX_EXCLUDE_TITLE_KEYWORDS);
     expect(keywords[0]).toBe("a".repeat(MAX_EXCLUDE_TITLE_KEYWORD_LENGTH));
+  });
+
+  it("de-duplicates ignoring case the same way the API does", () => {
+    expect(parseTitleKeywords("Zoom, zoom, standup")).toEqual(["Zoom", "standup"]);
+  });
+});
+
+describe("areTitleKeywordsEqual", () => {
+  it("treats a re-spaced list as unchanged", () => {
+    expect(areTitleKeywordsEqual(parseTitleKeywords("a,b"), ["a", "b"])).toBe(true);
+  });
+
+  it("treats a reordered list as changed", () => {
+    expect(areTitleKeywordsEqual(["b", "a"], ["a", "b"])).toBe(false);
   });
 });
 

@@ -1,7 +1,4 @@
-import {
-  MAX_EXCLUDE_TITLE_KEYWORDS,
-  MAX_EXCLUDE_TITLE_KEYWORD_LENGTH,
-} from "@keeper.sh/data-schemas";
+import { normalizeTitleKeywords } from "@keeper.sh/data-schemas";
 import type { ExcludableAvailability } from "@keeper.sh/data-schemas";
 
 interface CalendarLike {
@@ -33,11 +30,13 @@ export const toggleExcludedAvailability = (
 const TITLE_KEYWORD_SEPARATOR = ",";
 
 export const parseTitleKeywords = (value: string): string[] =>
-  value
-    .split(TITLE_KEYWORD_SEPARATOR)
-    .map((keyword) => keyword.trim().slice(0, MAX_EXCLUDE_TITLE_KEYWORD_LENGTH).trim())
-    .filter((keyword) => keyword.length > 0)
-    .slice(0, MAX_EXCLUDE_TITLE_KEYWORDS);
+  normalizeTitleKeywords(value.split(TITLE_KEYWORD_SEPARATOR));
+
+export const areTitleKeywordsEqual = (
+  first: readonly string[],
+  second: readonly string[],
+): boolean =>
+  first.length === second.length && first.every((keyword, index) => keyword === second[index]);
 
 export const formatTitleKeywords = (keywords: string[]): string =>
   keywords.join(`${TITLE_KEYWORD_SEPARATOR} `);
