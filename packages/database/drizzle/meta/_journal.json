@@ -670,15 +670,22 @@
     {
       "idx": 95,
       "version": "7",
-      "when": 1791824354683,
-      "tag": "0095_complex_genesis",
+      "when": 1791906001909,
+      "tag": "0095_mark_existing_oauth_clients_legacy",
       "breakpoints": true
     },
     {
       "idx": 96,
       "version": "7",
-      "when": 1791824355118,
-      "tag": "0096_tough_morbius",
+      "when": 1791909884328,
+      "tag": "0096_complex_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1791909884329,
+      "tag": "0097_tough_morbius",
       "breakpoints": true
     }
   ]
